@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#061a2d">
+<title>APX24 — Esports Society</title>
+
+<style>
+:root{
+  --bg:#030c16;
+  --panel:#0b2743;
+  --panel2:#102f4e;
+  --line:#1e4566;
+  --text:#f6f8fb;
+  --muted:#9fb1c4;
+  --yellow:#ffd21a;
+  --green:#35d39a;
+  --red:#ff5267;
+  --blue:#38bdf8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
+body{min-height:100vh}
+button,input{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.55}
+
+.app{
+  max-width:760px;
+  min-height:100vh;
+  margin:auto;
+  background:linear-gradient(180deg,#061b31,#06182a);
+  padding-bottom:82px;
+}
+
+header{
+  position:sticky;
+  top:0;
+  z-index:20;
+  height:72px;
+  padding:10px 14px;
+  background:rgba(5,18,34,.96);
+  backdrop-filter:blur(12px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid #173653;
+}
+
+.brand{display:flex;align-items:center;gap:10px}
+.brandmark{
+  width:42px;height:42px;border-radius:50%;
+  object-fit:cover;border:1px solid #263c50;background:#102f4e
+}
+.brand b{font-size:17px}
+.brand small{display:block;color:var(--muted);font-size:11px}
+
+.wallet{
+  background:#fff;color:#111;border-radius:12px;
+  padding:8px 11px;font-weight:900;
+  box-shadow:0 0 0 2px #273d53
+}
+
+.page{display:none}
+.page.active{display:block}
+
+.hero{
+  margin:12px 14px 16px;
+  border-radius:16px;
+  overflow:hidden;
+  min-height:190px;
+  position:relative;
+  background:#120407 url("assets/apx24-poster.png") center 34%/cover no-repeat;
+  border:1px solid #3a1d25;
+}
+.hero:after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(0,0,0,.84),rgba(0,0,0,.25) 70%,rgba(0,0,0,.5));
+}
+.heroText{position:relative;z-index:1;padding:30px 20px;max-width:450px}
+.eyebrow{font-size:11px;letter-spacing:2px;color:#ff6677;font-weight:900}
+.hero h1{font-size:29px;line-height:1.03;margin:7px 0}
+.hero p{color:#d7e0ea;margin:0;font-size:13px;line-height:1.5}
+
+.notice{
+  margin:12px 14px;
+  background:#fff;color:#111;
+  padding:14px;border-left:7px solid var(--yellow);
+  font-weight:900;border-radius:4px
+}
+
+.sectionTitle{text-align:center;font-size:19px;margin:22px 0 12px}
+.matches{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;padding:0 14px
+}
+.match{
+  background:#fff;color:#111;border:0;border-radius:10px;
+  padding:14px 6px;font-weight:900
+}
+.match .ico{font-size:27px;display:block;margin-bottom:6px}
+
+.tabs{
+  margin:14px;background:#fff;padding:4px;border-radius:9px;display:flex
+}
+.tab{
+  flex:1;border:0;background:#fff;color:#222;
+  padding:12px;border-radius:7px;font-weight:900
+}
+.tab.active{background:#222a3d;color:#fff}
+
+.grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:10px;padding:0 14px
+}
+.game{
+  border:0;background:#15253a;color:#fff;border-radius:10px;
+  overflow:hidden;padding:0;box-shadow:0 4px 12px rgba(0,0,0,.2);
+  text-align:left
+}
+.game img{
+  display:block;width:100%;aspect-ratio:1.42;
+  object-fit:cover;object-position:center top
+}
+.game b{display:block;padding:9px 7px;font-size:12px}
+.game:active{transform:scale(.985)}
+
+.bottom{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:min(760px,100%);
+  display:flex;background:#030303;
+  border-top:1px solid #1c1c1c;z-index:30
+}
+.bottom button{
+  flex:1;background:none;border:0;color:#a8a8a8;
+  padding:9px 0 8px;font-weight:800;font-size:12px
+}
+.bottom button.active{color:#fff}
+.bottom span{display:block;font-size:20px;margin-bottom:2px}
+
+.panel{
+  margin:14px;
+  background:linear-gradient(180deg,#0d2b48,#0a233c);
+  border:1px solid var(--line);
+  border-radius:14px;padding:17px
+}
+.panel h2{margin:0 0 12px}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.muted{color:var(--muted)}
+.empty{text-align:center;color:var(--muted);padding:45px 10px}
+
+.primary,.secondary{
+  width:100%;border-radius:9px;padding:13px;
+  font-weight:900;margin-top:9px
+}
+.primary{border:0;background:var(--yellow);color:#111}
+.secondary{border:1px solid #31516e;background:#122f4c;color:#fff}
+
+input{
+  width:100%;padding:13px;margin:6px 0;
+  background:#071522;border:1px solid #294964;
+  border-radius:9px;color:#fff;outline:none
+}
+input:focus{border-color:var(--blue)}
+.fieldlabel{font-size:12px;color:var(--muted);margin-top:8px;display:block}
+
+.list{display:grid;gap:10px}
+.item{
+  background:#0a2036;border:1px solid #1b415f;
+  border-radius:11px;padding:13px
+}
+.pill{
+  display:inline-block;border-radius:999px;
+  padding:4px 8px;font-size:10px;font-weight:900
+}
+.pill.yellow{background:#403713;color:#ffe06b}
+.pill.green{background:#123b30;color:#63e7b4}
+.pill.red{background:#421d27;color:#ff9aa7}
+
+.capacity{margin-top:8px;font-size:11px;color:#c5d2df}
+.note{font-size:12px;color:#aebdca;line-height:1.5}
+.price{
+  font-size:22px;font-weight:900;color:var(--yellow);
+  margin:5px 0
+}
+
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.78);
+  display:none;align-items:flex-end;justify-content:center;z-index:50
+}
+.modal.show{display:flex}
+.sheet{
+  width:min(760px,100%);
+  max-height:90vh;overflow:auto;
+  background:#0a2036;border:1px solid #274965;
+  border-radius:18px 18px 0 0;padding:18px
+}
+.close{
+  float:right;background:none;border:0;color:#fff;
+  font-size:28px;line-height:1
+}
+
+.qr{
+  display:block;width:min(280px,78vw);height:auto;
+  margin:14px auto;background:#fff;padding:8px;border-radius:12px
+}
+.qrFallback{
+  display:none;text-align:center;
+  background:#fff;color:#111;border-radius:12px;
+  padding:35px 15px;margin:14px auto
+}
+.amountGrid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:9px;margin:12px 0
+}
+.amount{
+  border:1px solid #31516e;background:#122f4c;
+  color:#fff;border-radius:10px;padding:12px;font-weight:900
+}
+.amount.selected{border-color:var(--yellow);background:#2d2914;color:#ffe46b}
+
+.successBox,.errorBox{
+  display:none;margin-top:10px;padding:11px;
+  border-radius:9px;font-size:13px
+}
+.successBox{background:#123b30;color:#8ff0c7}
+.errorBox{background:#421d27;color:#ffb3bd}
+
+.auth{padding-top:30px}
+.auth .hero{min-height:240px}
+.authBox{
+  margin:14px;background:#0b2743;
+  border:1px solid #1f4664;border-radius:14px;padding:18px
+}
+
+.smallBtn{
+  width:auto;padding:8px 11px;border-radius:8px;
+  border:1px solid #31516e;background:#122f4c;color:#fff
+}
+
+@media(max-width:440px){
+  .grid{gap:7px}
+  .game b{font-size:11px}
+  .hero h1{font-size:24px}
+}
+
+/* APX24 secure-auth UI */
+.authGate{position:fixed;inset:0;z-index:1000;background:#030c16;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.authCard{width:min(460px,100%);background:#0b2743;border:1px solid #1e4566;border-radius:16px;padding:20px;box-shadow:0 20px 60px #000b}
+.authCard h2{margin:0 0 6px}.authSub{font-size:13px;color:#9fb1c4;line-height:1.45;margin-bottom:14px}
+.authCard input{margin:6px 0}.authMsg{min-height:18px;font-size:12px;margin:7px 0}.authError{color:#ff9aa7}.authSuccess{color:#63e7b4}
+.authLinks{display:flex;gap:8px;margin-top:10px}.authLinks button{flex:1}
+.authCode{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #1e4566}
+.authHint{font-size:11px;color:#9fb1c4;line-height:1.5}
+.authUser{font-size:11px;color:#9fb1c4;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+header .walletArea{display:flex;align-items:center;gap:7px}
+header .logoutMini{width:auto;margin:0;padding:7px 9px;border-radius:8px;border:1px solid #31516e;background:#122f4c;color:#fff;font-size:11px;font-weight:800}
+
+</style>
+</head>
+
+<body>
+
+<div id="authGate" class="authGate">
+  <div class="authCard">
+    <h2 id="authHeading">🔐 APX24 Login</h2>
+    <div id="authSub" class="authSub">Login with your verified Gmail or phone number.</div>
+
+    <div id="loginForm">
+      <label class="fieldlabel">Gmail or phone number</label>
+      <input id="loginIdentifier" type="text" autocomplete="username" placeholder="example@gmail.com or phone">
+      <label class="fieldlabel">Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Your password">
+      <button class="primary" onclick="authLogin()">Login</button>
+      <div id="loginMsg" class="authMsg"></div>
+      <div class="authLinks">
+        <button class="secondary" onclick="showAuthMode('signup')">Create account</button>
+      </div>
+    </div>
+
+    <div id="signupForm" style="display:none">
+      <label class="fieldlabel">Gmail address</label>
+      <input id="signupEmail" type="email" autocomplete="email" placeholder="example@gmail.com">
+      <label class="fieldlabel">Phone number <span class="muted">(optional)</span></label>
+      <input id="signupPhone" type="tel" autocomplete="tel" placeholder="+91XXXXXXXXXX">
+      <label class="fieldlabel">Strong password</label>
+      <input id="signupPassword" type="password" autocomplete="new-password" placeholder="Create a strong password">
+      <div class="authHint">Minimum 8 characters: 1 uppercase, 1 lowercase, 1 number and 1 special character.</div>
+      <button class="primary" onclick="requestEmailCode()">Send Gmail verification code</button>
+      <div id="signupMsg" class="authMsg"></div>
+
+      <div id="emailCodeBox" class="authCode">
+        <label class="fieldlabel">6-digit Gmail verification code</label>
+        <input id="signupCode" inputmode="numeric" maxlength="6" placeholder="Enter code">
+        <button class="primary" onclick="verifyAndCreate()">Verify Gmail & Create Account</button>
+        <div class="authHint">The code must be generated and sent by your server/auth provider. This HTML does not expose or fake a real Gmail OTP.</div>
+      </div>
+
+      <div class="authLinks">
+        <button class="secondary" onclick="showAuthMode('login')">Back to login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+<header>
+  <div class="brand">
+    <img class="brandmark" src="assets/apx24-poster.png" alt="APX24">
+    <div><b>APX24</b><small>Esports Society</small></div>
+  </div>
+  <div class="walletArea"><span id="authUserBadge" class="authUser"></span><button class="logoutMini" onclick="logout()">Logout</button><div class="wallet">🪙 ₹<span id="balance">0</span></div></div>
+</header>
+
+<!-- LOGIN -->
+<section id="loginPage" class="page active auth">
+  <div class="hero">
+    <div class="heroText">
+      <div class="eyebrow">APX24 OFFICIAL DEMO</div>
+      <h1>PLAY. COMPETE.<br>LEVEL UP.</h1>
+      <p>Competitive esports hub with tournaments, wallet demo and match tracking.</p>
+    </div>
+  </div>
+
+  <div class="authBox">
+    <h2>Login / Sign Up</h2>
+    <input id="name" placeholder="Full name">
+    <input id="email" type="email" placeholder="Email" style="display:none">
+    <input id="pass" type="password" placeholder="Password" style="display:none">
+    <button class="primary" onclick="showAuthMode('signup')">Create / Login Account</button>
+    <p class="note">Demo only: account and wallet data stay in this browser. No real-money payment is processed.</p>
+  </div>
+</section>
+
+<!-- HOME -->
+<section id="homePage" class="page">
+  <div class="notice">⚡ APX24 — TOURNAMENTS & GENERAL RULES</div>
+
+  <div class="hero">
+    <div class="heroText">
+      <div class="eyebrow">ESPORTS SOCIETY</div>
+      <h1>YOUR NEXT MATCH<br>STARTS HERE.</h1>
+      <p>Pick a mode, view available tournaments and join eligible matches.</p>
+    </div>
+  </div>
+
+  <h2 class="sectionTitle">My Matches</h2>
+  <div class="matches">
+    <button class="match" onclick="showMatches('ongoing')"><span class="ico">🔄</span>Ongoing</button>
+    <button class="match" onclick="showMatches('upcoming')"><span class="ico">🗓️</span>Upcoming</button>
+    <button class="match" onclick="showMatches('completed')"><span class="ico">✓</span>Completed</button>
+  </div>
+
+  <h2 class="sectionTitle">Esports Games</h2>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(this,'tournament')">TOURNAMENT</button>
+    <button class="tab" onclick="switchTab(this,'solo')">SOLO</button>
+  </div>
+
+  <div id="gameGrid" class="grid"></div>
+</section>
+
+<!-- MATCHES -->
+<section id="matchesPage" class="page">
+  <div class="panel">
+    <button class="secondary" onclick="goHome()">← Back</button>
+    <h2 id="matchTitle" style="margin-top:14px">Matches</h2>
+    <div id="matchList"></div>
+  </div>
+</section>
+
+<!-- WALLET -->
+<section id="walletPage" class="page">
+  <div class="panel">
+    <div class="row">
+      <div>
+        <div class="muted">Available demo balance</div>
+        <h1 style="margin:4px 0">₹<span id="bal2">0</span></h1>
+      </div>
+      <span class="pill green">DEMO WALLET</span>
+    </div>
+
+    <button class="primary" onclick="openAdd()">＋ Add Coins</button>
+    <button class="secondary" onclick="openWithdraw()">↗ Withdraw</button>
+
+    <p class="note">
+      Demo wallet only. Add Coins requests remain pending until an admin approves them.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2>My Wallet Requests</h2>
+    <div id="walletRequests" class="list"></div>
+  </div>
+</section>
+
+<!-- ACCOUNT -->
+<section id="accountPage" class="page">
+  <div class="panel">
+    <h2>Account</h2>
+    <div id="profile" class="muted"></div>
+    <button class="primary" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="panel">
+    <h2>Admin</h2>
+    <button class="secondary" onclick="window.open('admin.html','_blank')">
+      Open Admin Panel
+    </button>
+  </div>
+</section>
+
+<nav id="nav" class="bottom">
+  <button onclick="openPage('walletPage')"><span>🪙</span>Wallet</button>
+  <button class="active" onclick="goHome()"><span>🎮</span>Play</button>
+  <button onclick="openPage('accountPage')"><span>👤</span>Account</button>
+</nav>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal" onclick="outsideClose(event)">
+  <div class="sheet">
+    <button class="close" onclick="closeModal()">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+const games = [
+  ["Full Map","assets/joker-chest-crop.jpg"],
+  ["Survival","assets/joker-chest-crop.jpg"],
+  ["CS 1V1","assets/joker-chest-crop.jpg"],
+  ["Lonewolf 1V1","assets/joker-chest-crop.jpg"],
+  ["Clash Squad 2V2","assets/joker-chest-crop.jpg"],
+  ["Lonewolf 2V2","assets/joker-chest-crop.jpg"],
+  ["Headshot 1V1","assets/joker-chest-crop.jpg"],
+  ["Lonewolf Headshot","assets/joker-chest-crop.jpg"],
+  ["Lonewolf 10₹","assets/joker-chest-crop.jpg"],
+  ["Headshot 2V2","assets/joker-chest-crop.jpg"],
+  ["Clash Squad 4V4","assets/joker-chest-crop.jpg"],
+  ["CS Gun Pro","assets/joker-chest-crop.jpg"],
+  ["Lonewolf Night","assets/joker-chest-crop.jpg"],
+  ["CS Night Mode","assets/joker-chest-crop.jpg"],
+  ["Free Match","assets/joker-chest-crop.jpg"]
+];
+
+let tab = "tournament";
+let selectedAmount = 0;
+
+const $ = id => document.getElementById(id);
+
+function getTournaments(){
+  return JSON.parse(localStorage.getItem("apxTournaments") || "[]");
+}
+
+function saveTournaments(x){
+  localStorage.setItem("apxTournaments", JSON.stringify(x));
+}
+
+function getReqs(){
+  return JSON.parse(localStorage.getItem("apxRequests") || "[]");
+}
+
+function saveReqs(x){
+  localStorage.setItem("apxRequests", JSON.stringify(x));
+}
+
+function renderGames(){
+  $("gameGrid").innerHTML = games.map(g => `
+    <button class="game" onclick="game('${escapeHtml(g[0])}')">
+      <img src="${g[1]}" alt="${escapeHtml(g[0])}"
+           onerror="this.style.display='none'">
+      <b>${escapeHtml(g[0])}</b>
+    </button>
+  `).join("");
+}
+
+function switchTab(el,t){
+  tab=t;
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  el.classList.add("active");
+  renderGames();
+}
+
+function game(name){
+  const all = getTournaments().filter(
+    x => x.game === name && (x.status === "Upcoming" || x.status === "Live")
+  );
+
+  let html = `<h2>${escapeHtml(name)}</h2>`;
+
+  if(!all.length){
+    html += `<div class="empty">No matches available in this category right now.</div>`;
+  } else {
+    html += `<div class="list">`;
+
+    all.forEach(x=>{
+      const players = Number(x.players || 0);
+      const max = Number(x.maxPlayers || 48);
+      const full = players >= max;
+
+      html += `
+        <div class="item">
+          <b>${escapeHtml(x.name || "Tournament")}</b>
+          <div class="note">
+            ${escapeHtml(x.status || "")} • Entry ₹${Number(x.entry || 0)}
+            • Prize ₹${Number(x.prize || 0)}
+            <br>${escapeHtml(x.date || "Schedule to be announced")}
+          </div>
+
+          <div class="capacity">
+            👥 ${players}/${max} players
+            • Prize Pool ₹${Number(x.prizePool || 0)}
+          </div>
+
+          <button class="${full ? "secondary" : "primary"}"
+                  ${full ? "disabled" : ""}
+                  onclick="joinMatch('${x.id}')">
+            ${full ? "MATCH FULL" : "Join Match"}
+          </button>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  }
+
+  showModal(html);
+}
+
+function joinMatch(id){
+  const ts = getTournaments();
+  const t = ts.find(x=>x.id===id);
+  if(!t) return;
+
+  const user = JSON.parse(localStorage.getItem("apxUser") || "{}");
+  if(!user.e) return alert("Please login first.");
+
+  const b = Number(localStorage.getItem("apxBal") || 0);
+  const players = Number(t.players || 0);
+  const max = Number(t.maxPlayers || 48);
+
+  if(players >= max)
+    return alert(`Match Full — ${max} of ${max} players have already joined.`);
+
+  if(Number(t.entry || 0) > b)
+    return alert("Insufficient demo balance.");
+
+  const reqs = getReqs();
+
+  if(reqs.some(r =>
+    r.type === "join" &&
+    r.tournamentId === id &&
+    r.email === user.e
+  )){
+    return alert("You already joined this match.");
+  }
+
+  localStorage.setItem(
+    "apxBal",
+    String(b - Number(t.entry || 0))
+  );
+
+  t.players = players + 1;
+  t.prizePool = Number(t.prizePool || 0) + Number(t.entry || 0);
+
+  saveTournaments(ts);
+
+  reqs.push({
+    id:makeId(),
+    type:"join",
+    tournamentId:id,
+    name:t.name,
+    email:user.e,
+    amount:Number(t.entry || 0),
+    status:"Joined",
+    created:new Date().toLocaleString()
+  });
+
+  saveReqs(reqs);
+  updateBal();
+  closeModal();
+
+  alert(`Joined successfully. Players: ${t.players}/${max}`);
+}
+
+function showMatches(type){
+  openPage("matchesPage");
+
+  $("matchTitle").textContent =
+    type[0].toUpperCase()+type.slice(1)+" Matches";
+
+  const ts = getTournaments().filter(x =>
+    type==="upcoming" ? x.status==="Upcoming" :
+    type==="ongoing" ? x.status==="Live" :
+    x.status==="Completed"
+  );
+
+  if(!ts.length){
+    $("matchList").innerHTML =
+      `<div class="empty">No ${type} matches available right now.</div>`;
+    return;
+  }
+
+  $("matchList").innerHTML = `
+    <div class="list">
+      ${ts.map(x=>`
+        <div class="item">
+          <b>${escapeHtml(x.name || "Tournament")}</b>
+          <div class="note">
+            ${escapeHtml(x.game || "")}
+            • Entry ₹${Number(x.entry || 0)}
+            • Prize ₹${Number(x.prize || 0)}
+            <br>${escapeHtml(x.status || "")}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+/* IMPROVED ADD COINS */
+function openAdd(){
+  selectedAmount = 0;
+
+  showModal(`
+    <h2>🪙 Add Coins</h2>
+    <p class="note">
+      Select an amount, scan the QR shown below, then submit a demo request.
+    </p>
+
+    <div class="amountGrid">
+      ${[10,50,100,200,500,1000].map(a=>`
+        <button class="amount" id="amt${a}"
+                onclick="selectAmount(${a})">
+          ₹${a}
+        </button>
+      `).join("")}
+    </div>
+
+    <label class="fieldlabel">Or enter another amount</label>
+    <input id="addAmt" type="number" min="10" placeholder="Minimum ₹10"
+           oninput="manualAmount()">
+
+    <img class="qr" src="assets/upi-qr.jpg"
+         alt="UPI QR"
+         onerror="showQrFallback()">
+
+    <div id="qrFallback" class="qrFallback">
+      <h3>QR image not found</h3>
+      <p>Add your QR image as:</p>
+      <b>assets/upi-qr.jpg</b>
+    </div>
+
+    <p class="note">
+      Demo only: this static page does not verify payments or process real money.
+    </p>
+
+    <div id="addError" class="errorBox"></div>
+    <button class="primary" onclick="submitAdd()">
+      Send Add Coins Request
+    </button>
+  `);
+}
+
+function selectAmount(amount){
+  selectedAmount = amount;
+  $("addAmt").value = amount;
+
+  document.querySelectorAll(".amount")
+    .forEach(x=>x.classList.remove("selected"));
+
+  const btn = $("amt"+amount);
+  if(btn) btn.classList.add("selected");
+}
+
+function manualAmount(){
+  selectedAmount = Number($("addAmt").value || 0);
+  document.querySelectorAll(".amount")
+    .forEach(x=>x.classList.remove("selected"));
+}
+
+function submitAdd(){
+  const a = Number($("addAmt").value || selectedAmount || 0);
+
+  if(a < 10){
+    const e = $("addError");
+    e.textContent = "Minimum add amount is ₹10.";
+    e.style.display = "block";
+    return;
+  }
+
+  const u = JSON.parse(localStorage.getItem("apxUser") || "{}");
+  if(!u.e) return alert("Please login first.");
+
+  const reqs = getReqs();
+
+  reqs.push({
+    id:makeId(),
+    type:"add",
+    email:u.e,
+    name:u.n,
+    amount:a,
+    status:"Pending",
+    created:new Date().toLocaleString()
+  });
+
+  saveReqs(reqs);
+  closeModal();
+  renderWalletRequests();
+
+  alert("Add Coins request sent to admin. Demo balance updates after approval.");
+}
+
+function openWithdraw(){
+  showModal(`
+    <h2>↗ Withdraw</h2>
+
+    <p class="note">
+      Demo withdrawal request. No real payout is processed by this static site.
+    </p>
+
+    <label class="fieldlabel">Amount</label>
+    <input id="wdAmt" type="number" min="10" placeholder="Minimum ₹10">
+
+    <label class="fieldlabel">Payout reference</label>
+    <input id="wdUpi" placeholder="Demo payout reference">
+
+    <div id="wdError" class="errorBox"></div>
+
+    <button class="primary" onclick="submitWithdraw()">
+      Send Withdrawal Request
+    </button>
+  `);
+}
+
+function submitWithdraw(){
+  const a = Number($("wdAmt").value || 0);
+  const ref = $("wdUpi").value.trim();
+  const b = Number(localStorage.getItem("apxBal") || 0);
+
+  if(a < 10) return showError("wdError","Minimum withdrawal is ₹10.");
+  if(a > b) return showError("wdError","Insufficient demo balance.");
+  if(!ref) return showError("wdError","Enter a payout reference.");
+
+  const u = JSON.parse(localStorage.getItem("apxUser") || "{}");
+  const reqs = getReqs();
+
+  localStorage.setItem("apxBal",String(b-a));
+
+  reqs.push({
+    id:makeId(),
+    type:"withdraw",
+    email:u.e,
+    name:u.n,
+    amount:a,
+    reference:ref,
+    status:"Pending",
+    created:new Date().toLocaleString()
+  });
+
+  saveReqs(reqs);
+  closeModal();
+  updateBal();
+  renderWalletRequests();
+
+  alert("Withdrawal request sent to admin.");
+}
+
+function renderWalletRequests(){
+  const u = JSON.parse(localStorage.getItem("apxUser") || "{}");
+  const rs = getReqs().filter(r=>r.email===u.e);
+
+  $("walletRequests").innerHTML = rs.length
+    ? rs.slice().reverse().map(r=>`
+        <div class="item">
+          <div class="row">
+            <b>${r.type==="add" ? "Add Coins" : "Withdraw"}</b>
+            <span class="pill ${
+              r.status==="Approved" || r.status==="Joined"
+                ? "green"
+                : r.status==="Rejected"
+                ? "red"
+                : "yellow"
+            }">${escapeHtml(r.status)}</span>
+          </div>
+          <div class="note">
+            ₹${Number(r.amount || 0)} • ${escapeHtml(r.created || "")}
+          </div>
+        </div>
+      `).join("")
+    : `<div class="empty">No wallet requests yet.</div>`;
+}
+
+function openPage(id){
+  document.querySelectorAll(".page")
+    .forEach(p=>p.classList.remove("active"));
+
+  $(id).classList.add("active");
+  $("nav").style.display = id==="loginPage" ? "none" : "flex";
+
+  document.querySelectorAll(".bottom button")
+    .forEach(b=>b.classList.remove("active"));
+
+  if(id==="walletPage")
+    document.querySelectorAll(".bottom button")[0].classList.add("active");
+
+  if(id==="homePage" || id==="matchesPage")
+    document.querySelectorAll(".bottom button")[1].classList.add("active");
+
+  if(id==="accountPage")
+    document.querySelectorAll(".bottom button")[2].classList.add("active");
+
+  if(id==="walletPage")
+    renderWalletRequests();
+
+  if(id==="accountPage"){
+    const u=JSON.parse(localStorage.getItem("apxUser")||"{}");
+    $("profile").textContent=u.e
+      ? `Logged in as ${u.n} (${u.e})`
+      : "Not logged in";
+  }
+}
+
+function goHome(){
+  openPage("homePage");
+}
+
+
+function getAuthAccounts(){
+  try{return JSON.parse(localStorage.getItem("apxAuthAccounts")||"{}")}catch(e){return {}}
+}
+function saveAuthAccounts(a){
+  localStorage.setItem("apxAuthAccounts",JSON.stringify(a));
+}
+function validGmailAddress(email){
+  return /^[A-Za-z0-9._%+-]+@gmail\.com$/i.test(email.trim());
+}
+function validPhoneNumber(phone){
+  return /^\+?[0-9]{10,15}$/.test(phone.replace(/[\s-]/g,""));
+}
+function validStrongPassword(p){
+  return p.length>=8 &&
+    /[A-Z]/.test(p) &&
+    /[a-z]/.test(p) &&
+    /[0-9]/.test(p) &&
+    /[^A-Za-z0-9]/.test(p);
+}
+function showAuthMode(mode){
+  $("loginForm").style.display = mode==="login" ? "block" : "none";
+  $("signupForm").style.display = mode==="signup" ? "block" : "none";
+  $("authHeading").textContent = mode==="signup" ? "📝 Create APX24 Account" : "🔐 APX24 Login";
+  $("authSub").textContent = mode==="signup"
+    ? "Use a valid @gmail.com address. Verify it before the account is created."
+    : "Login with your verified Gmail or phone number.";
+  $("loginMsg").textContent="";
+  $("signupMsg").textContent="";
+}
+function showAuthMessage(id,text,ok=false){
+  const e=$(id);
+  e.textContent=text;
+  e.className="authMsg "+(ok?"authSuccess":"authError");
+}
+function requestEmailCode(){
+  const email=$("signupEmail").value.trim().toLowerCase();
+  const phone=$("signupPhone").value.trim();
+  const password=$("signupPassword").value;
+  const accounts=getAuthAccounts();
+
+  if(!validGmailAddress(email)){
+    showAuthMessage("signupMsg","Only a valid @gmail.com address is accepted.");
+    return;
+  }
+  if(phone && !validPhoneNumber(phone)){
+    showAuthMessage("signupMsg","Enter a valid phone number or leave it blank.");
+    return;
+  }
+  if(!validStrongPassword(password)){
+    showAuthMessage("signupMsg","Password must be 8+ characters and include uppercase, lowercase, number and special character.");
+    return;
+  }
+  if(accounts[email]){
+    showAuthMessage("signupMsg","This Gmail is already registered. Please login.");
+    return;
+  }
+
+  // A real OTP must be generated and sent server-side.
+  // Do not store a real OTP or password in production localStorage.
+  localStorage.setItem("apxPendingSignup",JSON.stringify({
+    email:email,phone:phone,password:password,requestedAt:Date.now()
+  }));
+  $("emailCodeBox").style.display="block";
+  showAuthMessage("signupMsg","Verification code requested. Connect your email-auth backend to send the code to "+email+".",true);
+}
+function verifyAndCreate(){
+  const code=$("signupCode").value.trim();
+  if(!/^\d{6}$/.test(code)){
+    showAuthMessage("signupMsg","Enter the 6-digit verification code.");
+    return;
+  }
+
+  /*
+    SECURITY NOTE:
+    This function intentionally does NOT accept arbitrary local codes.
+    To make this real, replace this section with a server/Firebase/Supabase
+    verification call. The server must verify the OTP, then create the user.
+  */
+  showAuthMessage("signupMsg","The Gmail code must be verified by the connected authentication backend before the account can be created.");
+}
+function authLogin(){
+  const id=$("loginIdentifier").value.trim();
+  const password=$("loginPassword").value;
+  const accounts=getAuthAccounts();
+
+  if(validGmailAddress(id)){
+    const a=accounts[id.toLowerCase()];
+    if(!a || !a.verified) return showAuthMessage("loginMsg","This Gmail is not registered and verified.");
+    if(a.password!==password) return showAuthMessage("loginMsg","Incorrect password.");
+    setAuthUser({n:a.name||"Player",e:a.email,p:a.phone||""});
+    return;
+  }
+
+  if(validPhoneNumber(id)){
+    const normalized=id.replace(/[\s-]/g,"");
+    const a=Object.values(accounts).find(x=>x.phone===normalized && x.verified);
+    if(!a) return showAuthMessage("loginMsg","This phone number is not registered and verified.");
+    if(a.password!==password) return showAuthMessage("loginMsg","Incorrect password.");
+    setAuthUser({n:a.name||"Player",e:a.email,p:a.phone||""});
+    return;
+  }
+
+  showAuthMessage("loginMsg","Enter a valid Gmail address or phone number.");
+}
+function setAuthUser(user){
+  localStorage.setItem("apxUser",JSON.stringify(user));
+  $("authGate").style.display="none";
+  $("nav").style.display="flex";
+  $("authUserBadge").textContent=user.e||user.p||"Player";
+  $("profile").textContent=`Logged in as ${user.n} (${user.e})`;
+  openPage("homePage");
+}
+function login(){
+  showAuthMode("signup");
+}
+function logout(){
+  localStorage.removeItem("apxUser");
+  $("authGate").style.display="flex";
+  $("nav").style.display="none";
+  $("authUserBadge").textContent="";
+  showAuthMode("login");
+}
+
+function showModal(content){
+  $("modalContent").innerHTML=content;
+  $("modal").classList.add("show");
+}
+
+function closeModal(){
+  $("modal").classList.remove("show");
+}
+
+function outsideClose(e){
+  if(e.target === $("modal")) closeModal();
+}
+
+function showQrFallback(){
+  const img=document.querySelector(".qr");
+  if(img) img.style.display="none";
+
+  const f=$("qrFallback");
+  if(f) f.style.display="block";
+}
+
+function showError(id,msg){
+  const e=$(id);
+  if(!e)return;
+  e.textContent=msg;
+  e.style.display="block";
+}
+
+function makeId(){
+  return "apx-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
+}
+
+function escapeHtml(value){
+  return String(value)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function updateBal(){
+  const b=Number(localStorage.getItem("apxBal")||0);
+  $("balance").textContent=b;
+  $("bal2").textContent=b;
+}
+
+renderGames();
+updateBal();
+
+const existingUser=localStorage.getItem("apxUser");
+
+if(existingUser){
+  try{
+    const x=JSON.parse(existingUser);
+    $("authGate").style.display="none";
+    $("authUserBadge").textContent=x.e||x.p||"Player";
+    $("profile").textContent=`Logged in as ${x.n} (${x.e})`;
+    openPage("homePage");
+  }catch(e){
+    localStorage.removeItem("apxUser");
+    $("authGate").style.display="flex";
+    $("nav").style.display="none";
+  }
+}else{
+  $("authGate").style.display="flex";
+  $("nav").style.display="none";
+}
+</script>
+</body>
+</html>
