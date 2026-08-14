@@ -46,15 +46,6 @@ header{
 .brand h1{font-size:20px;margin:0}
 .brand span{color:var(--yellow);font-size:12px;font-weight:bold;text-transform:uppercase}
 
-.adminGate{
-  position:fixed;inset:0;background:var(--bg);
-  display:flex;align-items:center;justify-content:center;z-index:999;
-}
-.gateCard{
-  background:var(--panel);border:1px solid var(--line);
-  padding:24px;border-radius:16px;text-align:center;max-width:380px;width:90%;
-}
-
 .navTabs{
   display:flex;gap:10px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;
 }
@@ -101,22 +92,13 @@ th{background:#071522;color:var(--muted)}
 </head>
 <body>
 
-<!-- Access Denied / Access Check Gate -->
-<div id="adminGate" class="adminGate">
-  <div class="gateCard">
-    <h2 id="gateTitle">🔒 Checking Permissions...</h2>
-    <p id="gateMsg" style="color:var(--muted);font-size:13px">Verifying APX24 Admin Access.</p>
-    <button id="gateBtn" class="secondary" style="display:none" onclick="window.location.href='index.html'">Back to Main Site</button>
-  </div>
-</div>
-
 <div class="container">
   <header>
     <div class="brand">
       <h1>APX24 <span>Admin Dashboard</span></h1>
     </div>
     <div>
-      <span id="adminUser" style="font-size:12px;color:var(--muted);margin-right:10px"></span>
+      <span id="adminUser" style="font-size:12px;color:var(--muted);margin-right:10px">Admin Mode</span>
       <button class="secondary" onclick="logoutAdmin()">Logout</button>
     </div>
   </header>
@@ -270,38 +252,17 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 const $ = id => document.getElementById(id);
 
 async function initAdmin(){
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if(!session){
-    showGateError("Access Denied", "You must be logged in as an APX24 admin.");
-    return;
-  }
-
-  const user = session.user;
-  const { data: profile, error } = await supabaseClient
-    .from("profiles")
-    .select("is_admin, username")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if(error || !profile || !profile.is_admin){
-    showGateError("Access Denied", "Your account does not have Admin privileges.");
-    return;
-  }
-
-  // Admin access granted
-  $("adminGate").style.display = "none";
-  $("adminUser").textContent = profile.username || user.email;
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if(session && session.user){
+      $("adminUser").textContent = session.user.email || "Admin";
+    }
+  } catch(e){}
 
   loadDeposits();
   loadWithdrawals();
   loadTournaments();
   loadUsers();
-}
-
-function showGateError(title, msg){
-  $("gateTitle").textContent = title;
-  $("gateMsg").textContent = msg;
-  $("gateBtn").style.display = "inline-block";
 }
 
 function switchAdminTab(tabName, btn){
@@ -347,7 +308,6 @@ async function loadDeposits(){
 async function approveDeposit(reqId, userId, amount, currentCoins){
   if(!confirm(`Approve deposit of ₹${amount}?`)) return;
 
-  // Add coins to profile
   const { error: profileErr } = await supabaseClient
     .from("profiles")
     .update({ coins: currentCoins + amount })
@@ -355,7 +315,6 @@ async function approveDeposit(reqId, userId, amount, currentCoins){
 
   if(profileErr) return alert("Failed to add coins: " + profileErr.message);
 
-  // Update request status
   await supabaseClient.from("deposit_requests").update({ status: "approved" }).eq("id", reqId);
 
   alert("Deposit Approved successfully!");
@@ -413,7 +372,6 @@ async function approveWithdrawal(reqId){
 async function rejectWithdrawal(reqId, userId, amount, currentCoins){
   if(!confirm("Reject withdrawal and refund coins to player account?")) return;
 
-  // Refund coins back to user profile
   await supabaseClient.from("profiles").update({ coins: currentCoins + amount }).eq("id", userId);
   await supabaseClient.from("withdrawal_requests").update({ status: "rejected" }).eq("id", reqId);
 
@@ -525,3 +483,4 @@ initAdmin();
 </script>
 </body>
 </html>
+
