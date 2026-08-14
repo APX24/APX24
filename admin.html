@@ -380,42 +380,45 @@ async function rejectWithdrawal(reqId, userId, amount, currentCoins){
   loadUsers();
 }
 
-/* ================= 3. TOURNAMENTS MANAGEMENT ================= */
-function getTournaments(){
-  return JSON.parse(localStorage.getItem("apxTournaments") || "[]");
-}
+/* ================= 3. TOURNAMENTS MANAGEMENT (SUPABASE) ================= */
 
-function saveTournaments(list){
-  localStorage.setItem("apxTournaments", JSON.stringify(list));
-}
-
-function handleCreateTournament(e){
+async function handleCreateTournament(e){
   e.preventDefault();
-  const list = getTournaments();
 
   const newMatch = {
-    id: "apx-match-" + Date.now(),
     name: $("tName").value.trim(),
     game: $("tGame").value,
     entry: Number($("tEntry").value),
     prize: Number($("tPrize").value),
-    maxPlayers: Number($("tMax").value),
-    players: 0,
-    prizePool: 0,
+    max_players: Number($("tMax").value),
     date: $("tDate").value.trim(),
     status: "Upcoming"
   };
 
-  list.push(newMatch);
-  saveTournaments(list);
-  alert("Tournament created successfully!");
+  const { error } = await supabaseClient.from("tournaments").insert([newMatch]);
+
+  if(error){
+    alert("Error creating tournament: " + error.message);
+    return;
+  }
+
+  alert("Tournament created successfully in Database!");
   $("createMatchForm").reset();
   loadTournaments();
 }
 
-function loadTournaments(){
-  const list = getTournaments();
-  if(!list.length){
+async function loadTournaments(){
+  const { data: list, error } = await supabaseClient
+    .from("tournaments")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if(error){
+    $("tournamentRows").innerHTML = `<tr><td colspan="6" style="color:var(--red)">Error: ${error.message}</td></tr>`;
+    return;
+  }
+
+  if(!list || !list.length){
     $("tournamentRows").innerHTML = `<tr><td colspan="6" style="text-align:center">No active tournaments created yet.</td></tr>`;
     return;
   }
@@ -425,7 +428,7 @@ function loadTournaments(){
       <td><b>${escapeHtml(t.name)}</b></td>
       <td>${escapeHtml(t.game)}</td>
       <td>₹${t.entry} / ₹${t.prize}</td>
-      <td>${t.players}/${t.maxPlayers}</td>
+      <td>0/${t.max_players}</td>
       <td><span class="pill ${t.status === 'Live' ? 'approved' : 'pending'}">${t.status}</span></td>
       <td>
         <select onchange="updateMatchStatus('${t.id}', this.value)" style="width:auto;padding:4px">
@@ -438,16 +441,21 @@ function loadTournaments(){
   `).join("");
 }
 
-function updateMatchStatus(id, newStatus){
-  const list = getTournaments();
-  const t = list.find(x => x.id === id);
-  if(t){
-    t.status = newStatus;
-    saveTournaments(list);
-    alert(`Match status changed to ${newStatus}`);
-    loadTournaments();
+async function updateMatchStatus(id, newStatus){
+  const { error } = await supabaseClient
+    .from("tournaments")
+    .update({ status: newStatus })
+    .eq("id", id);
+
+  if(error){
+    alert("Failed to update status: " + error.message);
+    return;
   }
+
+  alert(`Match status changed to ${newStatus}`);
+  loadTournaments();
 }
+  
 
 /* ================= 4. USERS OVERVIEW ================= */
 async function loadUsers(){
