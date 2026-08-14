@@ -258,6 +258,7 @@ header .walletArea{display:flex;align-items:center;gap:7px}
 header .logoutMini{width:auto;margin:0;padding:7px 9px;border-radius:8px;border:1px solid #31516e;background:#122f4c;color:#fff;font-size:11px;font-weight:800}
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -265,7 +266,7 @@ header .logoutMini{width:auto;margin:0;padding:7px 9px;border-radius:8px;border:
 <div id="authGate" class="authGate">
   <div class="authCard">
     <h2 id="authHeading">🔐 APX24 Login</h2>
-    <div id="authSub" class="authSub">Login with your verified Gmail or phone number.</div>
+    <div id="authSub" class="authSub">Login with your Supabase account.</div>
 
     <div id="loginForm">
       <label class="fieldlabel">Gmail or phone number</label>
@@ -287,7 +288,7 @@ header .logoutMini{width:auto;margin:0;padding:7px 9px;border-radius:8px;border:
       <label class="fieldlabel">Strong password</label>
       <input id="signupPassword" type="password" autocomplete="new-password" placeholder="Create a strong password">
       <div class="authHint">Minimum 8 characters: 1 uppercase, 1 lowercase, 1 number and 1 special character.</div>
-      <button class="primary" onclick="requestEmailCode()">Send Gmail verification code</button>
+      <button class="primary" onclick="signupSupabase()">Create APX24 Account</button>
       <div id="signupMsg" class="authMsg"></div>
 
       <div id="emailCodeBox" class="authCode">
@@ -683,36 +684,17 @@ function manualAmount(){
     .forEach(x=>x.classList.remove("selected"));
 }
 
-function submitAdd(){
+async function submitAdd(){
   const a = Number($("addAmt").value || selectedAmount || 0);
-
   if(a < 10){
-    const e = $("addError");
-    e.textContent = "Minimum add amount is ₹10.";
-    e.style.display = "block";
-    return;
+    const e = $("addError"); e.textContent = "Minimum add amount is ₹10."; e.style.display = "block"; return;
   }
-
-  const u = JSON.parse(localStorage.getItem("apxUser") || "{}");
-  if(!u.e) return alert("Please login first.");
-
-  const reqs = getReqs();
-
-  reqs.push({
-    id:makeId(),
-    type:"add",
-    email:u.e,
-    name:u.n,
-    amount:a,
-    status:"Pending",
-    created:new Date().toLocaleString()
-  });
-
-  saveReqs(reqs);
-  closeModal();
-  renderWalletRequests();
-
-  alert("Add Coins request sent to admin. Demo balance updates after approval.");
+  const {data:{user}} = await supabaseClient.auth.getUser();
+  if(!user) return alert("Please login first.");
+  const {error}=await supabaseClient.from("deposit_requests").insert({user_id:user.id,amount:a,status:"pending"});
+  if(error) return alert("Could not create deposit request: "+error.message);
+  closeModal(); await renderWalletRequests();
+  alert("Deposit request sent to APX24 admin.");
 }
 
 function openWithdraw(){
@@ -737,62 +719,31 @@ function openWithdraw(){
   `);
 }
 
-function submitWithdraw(){
+async function submitWithdraw(){
   const a = Number($("wdAmt").value || 0);
   const ref = $("wdUpi").value.trim();
-  const b = Number(localStorage.getItem("apxBal") || 0);
-
   if(a < 10) return showError("wdError","Minimum withdrawal is ₹10.");
-  if(a > b) return showError("wdError","Insufficient demo balance.");
-  if(!ref) return showError("wdError","Enter a payout reference.");
-
-  const u = JSON.parse(localStorage.getItem("apxUser") || "{}");
-  const reqs = getReqs();
-
-  localStorage.setItem("apxBal",String(b-a));
-
-  reqs.push({
-    id:makeId(),
-    type:"withdraw",
-    email:u.e,
-    name:u.n,
-    amount:a,
-    reference:ref,
-    status:"Pending",
-    created:new Date().toLocaleString()
-  });
-
-  saveReqs(reqs);
-  closeModal();
-  updateBal();
-  renderWalletRequests();
-
-  alert("Withdrawal request sent to admin.");
+  if(!ref) return showError("wdError","Enter your UPI ID.");
+  const {data:{user}} = await supabaseClient.auth.getUser();
+  if(!user) return alert("Please login first.");
+  const {data:profile,error:pe}=await supabaseClient.from("Profiles").select('"Coins"').eq("id",user.id).maybeSingle();
+  if(pe) return showError("wdError",pe.message);
+  if(a>Number(profile?.Coins||0)) return showError("wdError","Insufficient withdrawable coins.");
+  const {error}=await supabaseClient.from("withdrawal_requests").insert({user_id:user.id,amount:a,upi_id:ref,status:"pending"});
+  if(error) return showError("wdError",error.message);
+  closeModal(); await renderWalletRequests();
+  alert("Withdrawal request sent to APX24 admin for approval.");
 }
 
-function renderWalletRequests(){
-  const u = JSON.parse(localStorage.getItem("apxUser") || "{}");
-  const rs = getReqs().filter(r=>r.email===u.e);
-
-  $("walletRequests").innerHTML = rs.length
-    ? rs.slice().reverse().map(r=>`
-        <div class="item">
-          <div class="row">
-            <b>${r.type==="add" ? "Add Coins" : "Withdraw"}</b>
-            <span class="pill ${
-              r.status==="Approved" || r.status==="Joined"
-                ? "green"
-                : r.status==="Rejected"
-                ? "red"
-                : "yellow"
-            }">${escapeHtml(r.status)}</span>
-          </div>
-          <div class="note">
-            ₹${Number(r.amount || 0)} • ${escapeHtml(r.created || "")}
-          </div>
-        </div>
-      `).join("")
-    : `<div class="empty">No wallet requests yet.</div>`;
+async function renderWalletRequests(){
+  const {data:{user}}=await supabaseClient.auth.getUser();
+  if(!user){ $("walletRequests").innerHTML='<div class="empty">Please login.</div>'; return; }
+  const [w,d]=await Promise.all([
+    supabaseClient.from("withdrawal_requests").select("id,amount,upi_id,status,admin_note,created_at,processed_at").eq("user_id",user.id).order("created_at",{ascending:false}),
+    supabaseClient.from("deposit_requests").select("id,amount,status,admin_note,created_at,processed_at").eq("user_id",user.id).order("created_at",{ascending:false})
+  ]);
+  const rs=[...(d.data||[]).map(x=>({...x,type:"add"})),...(w.data||[]).map(x=>({...x,type:"withdraw"}))].sort((a,b)=>String(b.created_at||"").localeCompare(String(a.created_at||"")));
+  $("walletRequests").innerHTML=rs.length ? rs.map(r=>`<div class="item"><div class="row"><b>${r.type==="add"?"Add Coins":"Withdraw"}</b><span class="pill ${String(r.status).toLowerCase()==="approved"?"green":String(r.status).toLowerCase()==="rejected"?"red":"yellow"}">${escapeHtml(r.status||"pending")}</span></div><div class="note">₹${Number(r.amount||0)} • ${escapeHtml(r.created_at||"")}${r.admin_note?`<br>Admin: ${escapeHtml(r.admin_note)}`:""}</div></div>`).join("") : '<div class="empty">No wallet requests yet.</div>';
 }
 
 function openPage(id){
@@ -830,128 +781,123 @@ function goHome(){
 }
 
 
-function getAuthAccounts(){
-  try{return JSON.parse(localStorage.getItem("apxAuthAccounts")||"{}")}catch(e){return {}}
-}
-function saveAuthAccounts(a){
-  localStorage.setItem("apxAuthAccounts",JSON.stringify(a));
-}
+/* ================= APX24 SUPABASE AUTH ================= */
+const SUPABASE_URL = "https://tjwnmrrggyumdztutogi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_I1azLM2b-tWacLEpzNcwUg_Uiw6ZCJT";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 function validGmailAddress(email){
   return /^[A-Za-z0-9._%+-]+@gmail\.com$/i.test(email.trim());
 }
-function validPhoneNumber(phone){
-  return /^\+?[0-9]{10,15}$/.test(phone.replace(/[\s-]/g,""));
-}
 function validStrongPassword(p){
-  return p.length>=8 &&
-    /[A-Z]/.test(p) &&
-    /[a-z]/.test(p) &&
-    /[0-9]/.test(p) &&
-    /[^A-Za-z0-9]/.test(p);
+  return p.length>=8 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p);
 }
 function showAuthMode(mode){
   $("loginForm").style.display = mode==="login" ? "block" : "none";
   $("signupForm").style.display = mode==="signup" ? "block" : "none";
   $("authHeading").textContent = mode==="signup" ? "📝 Create APX24 Account" : "🔐 APX24 Login";
-  $("authSub").textContent = mode==="signup"
-    ? "Use a valid @gmail.com address. Verify it before the account is created."
-    : "Login with your verified Gmail or phone number.";
+  $("authSub").textContent = mode==="signup" ? "Create a real APX24 account with Supabase." : "Login with your Supabase account.";
   $("loginMsg").textContent="";
   $("signupMsg").textContent="";
 }
 function showAuthMessage(id,text,ok=false){
-  const e=$(id);
+  const e=$(id); if(!e)return;
   e.textContent=text;
   e.className="authMsg "+(ok?"authSuccess":"authError");
 }
-function requestEmailCode(){
+
+async function signupSupabase(){
   const email=$("signupEmail").value.trim().toLowerCase();
-  const phone=$("signupPhone").value.trim();
   const password=$("signupPassword").value;
-  const accounts=getAuthAccounts();
+  if(!validGmailAddress(email)) return showAuthMessage("signupMsg","Only a valid @gmail.com address is accepted.");
+  if(!validStrongPassword(password)) return showAuthMessage("signupMsg","Password must be 8+ characters and include uppercase, lowercase, number and special character.");
 
-  if(!validGmailAddress(email)){
-    showAuthMessage("signupMsg","Only a valid @gmail.com address is accepted.");
-    return;
-  }
-  if(phone && !validPhoneNumber(phone)){
-    showAuthMessage("signupMsg","Enter a valid phone number or leave it blank.");
-    return;
-  }
-  if(!validStrongPassword(password)){
-    showAuthMessage("signupMsg","Password must be 8+ characters and include uppercase, lowercase, number and special character.");
-    return;
-  }
-  if(accounts[email]){
-    showAuthMessage("signupMsg","This Gmail is already registered. Please login.");
-    return;
-  }
+  showAuthMessage("signupMsg","Creating your APX24 account...",true);
+  const {data,error}=await supabaseClient.auth.signUp({
+    email,
+    password,
+    options:{data:{username:email.split("@")[0]}}
+  });
+  if(error) return showAuthMessage("signupMsg",error.message);
 
-  // A real OTP must be generated and sent server-side.
-  // Do not store a real OTP or password in production localStorage.
-  localStorage.setItem("apxPendingSignup",JSON.stringify({
-    email:email,phone:phone,password:password,requestedAt:Date.now()
-  }));
-  $("emailCodeBox").style.display="block";
-  showAuthMessage("signupMsg","Verification code requested. Connect your email-auth backend to send the code to "+email+".",true);
+  if(data.session){
+    await setAuthUserFromSession(data.session);
+  }else{
+    showAuthMessage("signupMsg","Account created. Check your Gmail verification email, then login here.",true);
+    showAuthMode("login");
+  }
 }
-function verifyAndCreate(){
-  const code=$("signupCode").value.trim();
-  if(!/^\d{6}$/.test(code)){
-    showAuthMessage("signupMsg","Enter the 6-digit verification code.");
-    return;
-  }
 
-  /*
-    SECURITY NOTE:
-    This function intentionally does NOT accept arbitrary local codes.
-    To make this real, replace this section with a server/Firebase/Supabase
-    verification call. The server must verify the OTP, then create the user.
-  */
-  showAuthMessage("signupMsg","The Gmail code must be verified by the connected authentication backend before the account can be created.");
-}
-function authLogin(){
-  const id=$("loginIdentifier").value.trim();
+async function authLogin(){
+  const email=$("loginIdentifier").value.trim().toLowerCase();
   const password=$("loginPassword").value;
-  const accounts=getAuthAccounts();
+  if(!validGmailAddress(email)) return showAuthMessage("loginMsg","Enter a valid Gmail address.");
+  if(!password) return showAuthMessage("loginMsg","Enter your password.");
 
-  if(validGmailAddress(id)){
-    const a=accounts[id.toLowerCase()];
-    if(!a || !a.verified) return showAuthMessage("loginMsg","This Gmail is not registered and verified.");
-    if(a.password!==password) return showAuthMessage("loginMsg","Incorrect password.");
-    setAuthUser({n:a.name||"Player",e:a.email,p:a.phone||""});
-    return;
-  }
-
-  if(validPhoneNumber(id)){
-    const normalized=id.replace(/[\s-]/g,"");
-    const a=Object.values(accounts).find(x=>x.phone===normalized && x.verified);
-    if(!a) return showAuthMessage("loginMsg","This phone number is not registered and verified.");
-    if(a.password!==password) return showAuthMessage("loginMsg","Incorrect password.");
-    setAuthUser({n:a.name||"Player",e:a.email,p:a.phone||""});
-    return;
-  }
-
-  showAuthMessage("loginMsg","Enter a valid Gmail address or phone number.");
+  showAuthMessage("loginMsg","Signing in...",true);
+  const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});
+  if(error) return showAuthMessage("loginMsg",error.message);
+  await setAuthUserFromSession(data.session);
 }
-function setAuthUser(user){
+
+async function setAuthUserFromSession(session){
+  if(!session || !session.user) return;
+  const u=session.user;
+  let username=(u.user_metadata && u.user_metadata.username) || u.email.split("@")[0];
+  let isAdmin=false;
+  const {data:profile}=await supabaseClient.from("profiles").select("username,is_admin").eq("id",u.id).maybeSingle();
+  if(profile){
+    username=profile.username || username;
+    isAdmin=profile.is_admin === true;
+  }
+  const user={id:u.id,n:username,e:u.email,p:"",isAdmin};
   localStorage.setItem("apxUser",JSON.stringify(user));
   $("authGate").style.display="none";
   $("nav").style.display="flex";
-  $("authUserBadge").textContent=user.e||user.p||"Player";
-  $("profile").textContent=`Logged in as ${user.n} (${user.e})`;
+  $("authUserBadge").textContent=u.email||"Player";
+  $("profile").textContent=`Logged in as ${username} (${u.email})${isAdmin?" • APX24 Admin":""}`;
+  const adminBtn=document.querySelector('button[onclick*="admin.html"]');
+  if(adminBtn) adminBtn.parentElement.style.display=isAdmin?"block":"none";
   openPage("homePage");
+  await loadSupabaseWallet();
 }
-function login(){
-  showAuthMode("signup");
+
+async function loadSupabaseWallet(){
+  const {data,error}=await supabaseClient.from("Profiles").select('"Coins"').eq("id",(await supabaseClient.auth.getUser()).data.user?.id).maybeSingle();
+  const balance=error ? Number(localStorage.getItem("apxBal")||0) : Number(data?.Coins||0);
+  localStorage.setItem("apxBal",String(balance));
+  $("balance").textContent=balance;
+  if($("bal2")) $("bal2").textContent=balance;
 }
-function logout(){
+
+async function restoreSupabaseSession(){
+  const {data:{session}}=await supabaseClient.auth.getSession();
+  if(session){
+    await setAuthUserFromSession(session);
+  }else{
+    localStorage.removeItem("apxUser");
+    $("authGate").style.display="flex";
+    $("nav").style.display="none";
+  }
+}
+
+async function logout(){
+  await supabaseClient.auth.signOut();
   localStorage.removeItem("apxUser");
   $("authGate").style.display="flex";
   $("nav").style.display="none";
   $("authUserBadge").textContent="";
   showAuthMode("login");
 }
+
+supabaseClient.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_IN" && session) setTimeout(()=>setAuthUserFromSession(session),0);
+  if(event==="SIGNED_OUT"){
+    localStorage.removeItem("apxUser");
+    $("authGate").style.display="flex";
+    $("nav").style.display="none";
+  }
+});
 
 function showModal(content){
   $("modalContent").innerHTML=content;
@@ -1003,24 +949,6 @@ function updateBal(){
 renderGames();
 updateBal();
 
-const existingUser=localStorage.getItem("apxUser");
-
-if(existingUser){
-  try{
-    const x=JSON.parse(existingUser);
-    $("authGate").style.display="none";
-    $("authUserBadge").textContent=x.e||x.p||"Player";
-    $("profile").textContent=`Logged in as ${x.n} (${x.e})`;
-    openPage("homePage");
-  }catch(e){
-    localStorage.removeItem("apxUser");
-    $("authGate").style.display="flex";
-    $("nav").style.display="none";
-  }
-}else{
-  $("authGate").style.display="flex";
-  $("nav").style.display="none";
-}
-</script>
+restoreSupabaseSession();</script>
 </body>
 </html>
