@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#061a2d">
+<title>APX24 — Admin Dashboard</title>
+
+<style>
+:root{
+  --bg:#030c16;
+  --panel:#0b2743;
+  --panel2:#102f4e;
+  --line:#1e4566;
+  --text:#f6f8fb;
+  --muted:#9fb1c4;
+  --yellow:#ffd21a;
+  --green:#35d39a;
+  --red:#ff5267;
+  --blue:#38bdf8;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif}
+body{min-height:100vh;padding-bottom:40px}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.55}
+
+.container{
+  max-width:960px;
+  margin:auto;
+  padding:16px;
+}
+
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:16px 20px;
+  background:#0b2743;
+  border-bottom:1px solid var(--line);
+  border-radius:12px;
+  margin-bottom:20px;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-size:20px;margin:0}
+.brand span{color:var(--yellow);font-size:12px;font-weight:bold;text-transform:uppercase}
+
+.adminGate{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;z-index:999;
+}
+.gateCard{
+  background:var(--panel);border:1px solid var(--line);
+  padding:24px;border-radius:16px;text-align:center;max-width:380px;width:90%;
+}
+
+.navTabs{
+  display:flex;gap:10px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px;
+}
+.navTab{
+  background:var(--panel);border:1px solid var(--line);color:var(--text);
+  padding:10px 16px;border-radius:8px;font-weight:bold;white-space:nowrap;
+}
+.navTab.active{background:var(--yellow);color:#111;border-color:var(--yellow)}
+
+.panel{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:20px;margin-bottom:20px;
+}
+.panel h2{margin-top:0;font-size:18px;border-bottom:1px solid var(--line);padding-bottom:10px}
+
+.gridForm{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;
+}
+input,select{
+  width:100%;padding:10px;background:#071522;border:1px solid var(--line);
+  border-radius:8px;color:#fff;outline:none;
+}
+input:focus,select:focus{border-color:var(--blue)}
+
+.primary{background:var(--yellow);color:#111;border:0;padding:10px 16px;border-radius:8px;font-weight:bold}
+.secondary{background:var(--panel2);color:#fff;border:1px solid var(--line);padding:8px 12px;border-radius:8px;font-weight:bold}
+.danger{background:var(--red);color:#fff;border:0;padding:6px 12px;border-radius:6px;font-weight:bold}
+.success{background:var(--green);color:#111;border:0;padding:6px 12px;border-radius:6px;font-weight:bold}
+
+.tableContainer{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:10px;text-align:left;font-size:13px}
+th,td{padding:12px;border-bottom:1px solid var(--line)}
+th{background:#071522;color:var(--muted)}
+
+.pill{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:bold;display:inline-block}
+.pill.pending{background:#403713;color:#ffe06b}
+.pill.approved{background:#123b30;color:#63e7b4}
+.pill.rejected{background:#421d27;color:#ff9aa7}
+
+.tabContent{display:none}
+.tabContent.active{display:block}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- Access Denied / Access Check Gate -->
+<div id="adminGate" class="adminGate">
+  <div class="gateCard">
+    <h2 id="gateTitle">🔒 Checking Permissions...</h2>
+    <p id="gateMsg" style="color:var(--muted);font-size:13px">Verifying APX24 Admin Access.</p>
+    <button id="gateBtn" class="secondary" style="display:none" onclick="window.location.href='index.html'">Back to Main Site</button>
+  </div>
+</div>
+
+<div class="container">
+  <header>
+    <div class="brand">
+      <h1>APX24 <span>Admin Dashboard</span></h1>
+    </div>
+    <div>
+      <span id="adminUser" style="font-size:12px;color:var(--muted);margin-right:10px"></span>
+      <button class="secondary" onclick="logoutAdmin()">Logout</button>
+    </div>
+  </header>
+
+  <div class="navTabs">
+    <button class="navTab active" onclick="switchAdminTab('deposits', this)">🪙 Deposit Requests</button>
+    <button class="navTab" onclick="switchAdminTab('withdrawals', this)">↗ Withdrawals</button>
+    <button class="navTab" onclick="switchAdminTab('tournaments', this)">🎮 Manage Tournaments</button>
+    <button class="navTab" onclick="switchAdminTab('users', this)">👥 Players Overview</button>
+  </div>
+
+  <!-- DEPOSIT REQUESTS TAB -->
+  <section id="depositsTab" class="tabContent active">
+    <div class="panel">
+      <h2>Coin Deposit Requests</h2>
+      <div class="tableContainer">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User Email</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="depositRows">
+            <tr><td colspan="5" style="text-align:center">Loading deposits...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- WITHDRAWAL REQUESTS TAB -->
+  <section id="withdrawalsTab" class="tabContent">
+    <div class="panel">
+      <h2>Withdrawal Requests</h2>
+      <div class="tableContainer">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User Email</th>
+              <th>Amount</th>
+              <th>UPI ID</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="withdrawalRows">
+            <tr><td colspan="6" style="text-align:center">Loading withdrawals...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOURNAMENTS TAB -->
+  <section id="tournamentsTab" class="tabContent">
+    <div class="panel">
+      <h2>Create New Match / Tournament</h2>
+      <form id="createMatchForm" onsubmit="handleCreateTournament(event)" class="gridForm">
+        <div>
+          <label style="font-size:11px;color:var(--muted)">Tournament Title</label>
+          <input id="tName" required placeholder="e.g. CS 1V1 Evening Clash">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted)">Game Category</label>
+          <select id="tGame">
+            <option value="CS 1V1">CS 1V1</option>
+            <option value="Full Map">Full Map</option>
+            <option value="Survival">Survival</option>
+            <option value="Lonewolf 1V1">Lonewolf 1V1</option>
+            <option value="Clash Squad 2V2">Clash Squad 2V2</option>
+            <option value="Clash Squad 4V4">Clash Squad 4V4</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted)">Entry Fee (₹)</label>
+          <input id="tEntry" type="number" required placeholder="10">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted)">Prize Pool (₹)</label>
+          <input id="tPrize" type="number" required placeholder="18">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted)">Max Players</label>
+          <input id="tMax" type="number" value="48" required>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted)">Date/Schedule</label>
+          <input id="tDate" required placeholder="Today, 8:00 PM">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <button type="submit" class="primary">Create Tournament</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Active / Existing Tournaments</h2>
+      <div class="tableContainer">
+        <table>
+          <thead>
+            <tr>
+              <th>Match Name</th>
+              <th>Game</th>
+              <th>Entry / Prize</th>
+              <th>Players</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tournamentRows">
+            <tr><td colspan="6" style="text-align:center">No tournaments created.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- USERS OVERVIEW TAB -->
+  <section id="usersTab" class="tabContent">
+    <div class="panel">
+      <h2>Registered Players</h2>
+      <div class="tableContainer">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Coins / Balance</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody id="userRows">
+            <tr><td colspan="3" style="text-align:center">Loading players...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://tjwnmrrggyumdztutogi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_I1azLM2b-tWacLEpzNcwUg_Uiw6ZCJT";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const $ = id => document.getElementById(id);
+
+async function initAdmin(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(!session){
+    showGateError("Access Denied", "You must be logged in as an APX24 admin.");
+    return;
+  }
+
+  const user = session.user;
+  const { data: profile, error } = await supabaseClient
+    .from("profiles")
+    .select("is_admin, username")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if(error || !profile || !profile.is_admin){
+    showGateError("Access Denied", "Your account does not have Admin privileges.");
+    return;
+  }
+
+  // Admin access granted
+  $("adminGate").style.display = "none";
+  $("adminUser").textContent = profile.username || user.email;
+
+  loadDeposits();
+  loadWithdrawals();
+  loadTournaments();
+  loadUsers();
+}
+
+function showGateError(title, msg){
+  $("gateTitle").textContent = title;
+  $("gateMsg").textContent = msg;
+  $("gateBtn").style.display = "inline-block";
+}
+
+function switchAdminTab(tabName, btn){
+  document.querySelectorAll(".navTab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tabContent").forEach(c => c.classList.remove("active"));
+  btn.classList.add("active");
+  $(tabName + "Tab").classList.add("active");
+}
+
+/* ================= 1. DEPOSITS MANAGEMENT ================= */
+async function loadDeposits(){
+  const { data: deposits, error } = await supabaseClient
+    .from("deposit_requests")
+    .select("*, profiles(username, coins)")
+    .order("created_at", { ascending: false });
+
+  if(error){
+    $("depositRows").innerHTML = `<tr><td colspan="5" style="color:var(--red)">Error: ${error.message}</td></tr>`;
+    return;
+  }
+
+  if(!deposits || !deposits.length){
+    $("depositRows").innerHTML = `<tr><td colspan="5" style="text-align:center">No deposit requests found.</td></tr>`;
+    return;
+  }
+
+  $("depositRows").innerHTML = deposits.map(d => `
+    <tr>
+      <td>${new Date(d.created_at).toLocaleString()}</td>
+      <td>${escapeHtml(d.profiles?.username || d.user_id)}</td>
+      <td><b>₹${d.amount}</b></td>
+      <td><span class="pill ${d.status}">${d.status.toUpperCase()}</span></td>
+      <td>
+        ${d.status === 'pending' ? `
+          <button class="success" onclick="approveDeposit('${d.id}', '${d.user_id}', ${d.amount}, ${d.profiles?.coins || 0})">Approve</button>
+          <button class="danger" onclick="rejectDeposit('${d.id}')">Reject</button>
+        ` : 'Processed'}
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function approveDeposit(reqId, userId, amount, currentCoins){
+  if(!confirm(`Approve deposit of ₹${amount}?`)) return;
+
+  // Add coins to profile
+  const { error: profileErr } = await supabaseClient
+    .from("profiles")
+    .update({ coins: currentCoins + amount })
+    .eq("id", userId);
+
+  if(profileErr) return alert("Failed to add coins: " + profileErr.message);
+
+  // Update request status
+  await supabaseClient.from("deposit_requests").update({ status: "approved" }).eq("id", reqId);
+
+  alert("Deposit Approved successfully!");
+  loadDeposits();
+  loadUsers();
+}
+
+async function rejectDeposit(reqId){
+  if(!confirm("Reject this deposit request?")) return;
+  await supabaseClient.from("deposit_requests").update({ status: "rejected" }).eq("id", reqId);
+  loadDeposits();
+}
+
+/* ================= 2. WITHDRAWALS MANAGEMENT ================= */
+async function loadWithdrawals(){
+  const { data: withdrawals, error } = await supabaseClient
+    .from("withdrawal_requests")
+    .select("*, profiles(username, coins)")
+    .order("created_at", { ascending: false });
+
+  if(error){
+    $("withdrawalRows").innerHTML = `<tr><td colspan="6" style="color:var(--red)">Error: ${error.message}</td></tr>`;
+    return;
+  }
+
+  if(!withdrawals || !withdrawals.length){
+    $("withdrawalRows").innerHTML = `<tr><td colspan="6" style="text-align:center">No withdrawal requests found.</td></tr>`;
+    return;
+  }
+
+  $("withdrawalRows").innerHTML = withdrawals.map(w => `
+    <tr>
+      <td>${new Date(w.created_at).toLocaleString()}</td>
+      <td>${escapeHtml(w.profiles?.username || w.user_id)}</td>
+      <td><b>₹${w.amount}</b></td>
+      <td><code>${escapeHtml(w.upi_id || 'N/A')}</code></td>
+      <td><span class="pill ${w.status}">${w.status.toUpperCase()}</span></td>
+      <td>
+        ${w.status === 'pending' ? `
+          <button class="success" onclick="approveWithdrawal('${w.id}')">Approve</button>
+          <button class="danger" onclick="rejectWithdrawal('${w.id}', '${w.user_id}', ${w.amount}, ${w.profiles?.coins || 0})">Reject & Refund</button>
+        ` : 'Processed'}
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function approveWithdrawal(reqId){
+  if(!confirm("Mark this withdrawal as Approved / Paid?")) return;
+  await supabaseClient.from("withdrawal_requests").update({ status: "approved" }).eq("id", reqId);
+  alert("Withdrawal marked as Approved.");
+  loadWithdrawals();
+}
+
+async function rejectWithdrawal(reqId, userId, amount, currentCoins){
+  if(!confirm("Reject withdrawal and refund coins to player account?")) return;
+
+  // Refund coins back to user profile
+  await supabaseClient.from("profiles").update({ coins: currentCoins + amount }).eq("id", userId);
+  await supabaseClient.from("withdrawal_requests").update({ status: "rejected" }).eq("id", reqId);
+
+  alert("Withdrawal rejected and coins refunded.");
+  loadWithdrawals();
+  loadUsers();
+}
+
+/* ================= 3. TOURNAMENTS MANAGEMENT ================= */
+function getTournaments(){
+  return JSON.parse(localStorage.getItem("apxTournaments") || "[]");
+}
+
+function saveTournaments(list){
+  localStorage.setItem("apxTournaments", JSON.stringify(list));
+}
+
+function handleCreateTournament(e){
+  e.preventDefault();
+  const list = getTournaments();
+
+  const newMatch = {
+    id: "apx-match-" + Date.now(),
+    name: $("tName").value.trim(),
+    game: $("tGame").value,
+    entry: Number($("tEntry").value),
+    prize: Number($("tPrize").value),
+    maxPlayers: Number($("tMax").value),
+    players: 0,
+    prizePool: 0,
+    date: $("tDate").value.trim(),
+    status: "Upcoming"
+  };
+
+  list.push(newMatch);
+  saveTournaments(list);
+  alert("Tournament created successfully!");
+  $("createMatchForm").reset();
+  loadTournaments();
+}
+
+function loadTournaments(){
+  const list = getTournaments();
+  if(!list.length){
+    $("tournamentRows").innerHTML = `<tr><td colspan="6" style="text-align:center">No active tournaments created yet.</td></tr>`;
+    return;
+  }
+
+  $("tournamentRows").innerHTML = list.map(t => `
+    <tr>
+      <td><b>${escapeHtml(t.name)}</b></td>
+      <td>${escapeHtml(t.game)}</td>
+      <td>₹${t.entry} / ₹${t.prize}</td>
+      <td>${t.players}/${t.maxPlayers}</td>
+      <td><span class="pill ${t.status === 'Live' ? 'approved' : 'pending'}">${t.status}</span></td>
+      <td>
+        <select onchange="updateMatchStatus('${t.id}', this.value)" style="width:auto;padding:4px">
+          <option value="Upcoming" ${t.status==='Upcoming'?'selected':''}>Upcoming</option>
+          <option value="Live" ${t.status==='Live'?'selected':''}>Live</option>
+          <option value="Completed" ${t.status==='Completed'?'selected':''}>Completed</option>
+        </select>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function updateMatchStatus(id, newStatus){
+  const list = getTournaments();
+  const t = list.find(x => x.id === id);
+  if(t){
+    t.status = newStatus;
+    saveTournaments(list);
+    alert(`Match status changed to ${newStatus}`);
+    loadTournaments();
+  }
+}
+
+/* ================= 4. USERS OVERVIEW ================= */
+async function loadUsers(){
+  const { data: users, error } = await supabaseClient
+    .from("profiles")
+    .select("username, coins, is_admin")
+    .order("coins", { ascending: false });
+
+  if(error){
+    $("userRows").innerHTML = `<tr><td colspan="3" style="color:var(--red)">Error: ${error.message}</td></tr>`;
+    return;
+  }
+
+  $("userRows").innerHTML = users.map(u => `
+    <tr>
+      <td>${escapeHtml(u.username || 'Player')}</td>
+      <td><b>🪙 ₹${u.coins || 0}</b></td>
+      <td>${u.is_admin ? '<span class="pill approved">ADMIN</span>' : 'Player'}</td>
+    </tr>
+  `).join("");
+}
+
+async function logoutAdmin(){
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+}
+
+function escapeHtml(val){
+  return String(val || '').replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+initAdmin();
+</script>
+</body>
+</html>
